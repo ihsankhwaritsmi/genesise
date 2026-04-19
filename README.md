@@ -133,9 +133,6 @@ Forces a search against Wikipedia, ArXiv, and DuckDuckGo regardless of local gra
 ### `Compress node: [node name]`
 Rewrites a verbose node body as a compact bullet-point list. YAML stays untouched. Updates `last_verified`.
 
-### `Update README`
-Writes a `README.md` in the workspace root — a living snapshot of what's in the graph: disciplines, all nodes, all sources, synthesis reports, and recent queries.
-
 ---
 
 ## How Retrieval Works

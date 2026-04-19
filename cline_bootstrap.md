@@ -342,30 +342,6 @@ Step 6 — Report
 4. Overwrite the file. Do not change filename or any YAML fields.
 5. Set last_verified to today.
 
-## "Update README"
-1. Read cluster_index.md, node_registry.md, input_manifest.md, and query_log.md.
-2. Write README.md in the workspace root:
-
-   # Knowledge Graph
-   > Last updated: [today]
-
-   ## Coverage
-   [one line per discipline: **Name** — Coverage Summary (N nodes)]
-
-   ## All Nodes
-   [full node_registry.md table]
-
-   ## Sources
-   [full input_manifest.md table]
-
-   ## Synthesis Reports
-   [node_registry.md rows where type = synthesis]
-
-   ## Recent Queries
-   [last 10 rows from query_log.md]
-
-3. Overwrite if README.md exists. Confirm node and source counts.
-
 ---
 
 # Token Discipline
