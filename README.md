@@ -79,6 +79,7 @@ Cline builds everything. You'll get a confirmation when it's ready.
 ├── 01_raw_inputs/         # Drop your files here (never committed to git)
 ├── 02_nodes/              # Generated knowledge graph nodes (never committed)
 ├── 03_indexes/            # Retrieval indexes (never committed)
+│   ├── input_manifest.md  ← tracks every source file, size, and processed state
 │   ├── cluster_index.md   ← discipline-level pre-filter, keeps queries fast at scale
 │   ├── node_registry.md   ← one row per node, primary retrieval index
 │   ├── master_index.md    ← human-readable table of contents
@@ -109,6 +110,13 @@ Query the graph: What did I learn about fermentation last month that applies to 
 
 ### `Synthesize across domains`
 Finds nodes from different disciplines and writes a report applying the principles of one to the problems of another. Adds backlinks so source nodes know they contributed.
+
+### `Sync graph`
+Run this at the start of any session where you may have changed `01_raw_inputs/` — added files, replaced a file with a newer version, or deleted something. Cline diffs the current folder against the manifest and handles each case:
+- **New file** → processes and adds a node
+- **Updated file** → re-extracts, rewrites the node, updates connections
+- **Deleted file** → removes the node, cleans up all references in other nodes
+- **Unchanged** → skipped entirely
 
 ### `Search external: [topic]`
 Forces a search against Wikipedia, ArXiv, and DuckDuckGo regardless of local graph state. Findings can be saved as nodes tagged `[EXTERNAL]`.

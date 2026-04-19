@@ -34,6 +34,14 @@ File: 03_indexes/cluster_index.md
   | Discipline | Node Count | Coverage Summary |
   |---|---|---|
 
+File: 03_indexes/input_manifest.md
+  # Input Manifest
+  Tracks every file ever seen in 01_raw_inputs/ and the node it produced.
+  Used by "Sync graph" to detect new, updated, and deleted files between sessions.
+
+  | Source File | Node File | Processed | Size (bytes) |
+  |---|---|---|---|
+
 File: 03_indexes/source_config.md
   # External Source Configuration
 
@@ -68,7 +76,7 @@ These rules apply ONLY to this directory and its subfolders.
 
 - `01_raw_inputs/`  — unprocessed source files
 - `02_nodes/`       — knowledge graph nodes (Markdown + YAML)
-- `03_indexes/`     — cluster_index.md, node_registry.md, master_index.md, source_config.md
+- `03_indexes/`     — input_manifest.md, cluster_index.md, node_registry.md, master_index.md, source_config.md
 - `04_synthesis/`   — cross-domain analytical reports
 
 ---
@@ -210,16 +218,19 @@ If enabled:
 
 # Command 1: "Process new data"
 
-1. Scan `01_raw_inputs/`. Cross-reference `node_registry.md` to find unprocessed files.
-2. Extract text from each (use terminal tools for PDFs/CSVs).
+1. Scan `01_raw_inputs/`. Cross-reference `input_manifest.md` to find unprocessed files.
+2. Extract text from each using the File Reading Protocol.
 3. Write a node in `02_nodes/` per the Node Standard.
 4. Linking: scan registry for concept overlaps. Update `connections:` in both files.
    Update `contradicts:` on both sides if there is a factual conflict.
 5. Registry: add one row to `node_registry.md`.
-6. Cluster index: if the node's discipline already exists in `cluster_index.md`, increment its
-   node count and revise the Coverage Summary if the new node expands the cluster's scope.
-   If the discipline is new, add a row with node count 1 and a one-sentence coverage summary.
+6. Cluster index: increment node count and revise Coverage Summary if scope expands.
+   If discipline is new, add a row with count 1 and a one-sentence summary.
 7. Master index: add a wikilink under the node's discipline heading.
+8. Manifest: add a row to `input_manifest.md` with the source filename, generated node filename,
+   current date as Processed, and file size in bytes (use OS command to get size).
+   - Windows : execute_command: powershell -command "(Get-Item '01_raw_inputs/FILE').Length"
+   - Mac/Linux: execute_command: wc -c < 01_raw_inputs/FILE
 
 ---
 
@@ -248,7 +259,57 @@ Present findings. Ask whether to save as a node before doing so.
 
 ---
 
-# Command 5: "Compress node: [node name]"
+# Command 5: "Sync graph"
+
+Detects all changes in `01_raw_inputs/` since the last session and updates the graph accordingly.
+Run this at the start of any session where you may have added, changed, or removed files.
+
+## Step 1 — Diff
+Read `03_indexes/input_manifest.md` to get the last known state.
+List current files in `01_raw_inputs/` and their sizes using:
+  - Windows : execute_command: powershell -command "Get-ChildItem '01_raw_inputs' | Select-Object Name, Length | Format-Table -AutoSize"
+  - Mac/Linux: execute_command: ls -la 01_raw_inputs/
+
+Compare against the manifest to classify every file as one of:
+  - NEW     : in 01_raw_inputs/ but not in manifest
+  - UPDATED : in both, but current size differs from manifest size
+  - DELETED : in manifest but no longer in 01_raw_inputs/
+  - UNCHANGED: in both with same size — skip entirely
+
+## Step 2 — Handle NEW files
+Run Command 1 ("Process new data") for each NEW file.
+
+## Step 3 — Handle UPDATED files
+For each UPDATED file:
+  a) Re-extract the file content using the File Reading Protocol.
+  b) Read the existing node from `02_nodes/`.
+  c) Re-run the Extraction Protocol. Rewrite the node body with updated content.
+     Preserve the filename and all YAML fields except summary (update if the core claim changed).
+  d) Re-scan the registry for connection changes. Add new connections, remove stale ones.
+  e) Update the manifest row: new size, new Processed date.
+  f) Update the registry row summary if it changed.
+
+## Step 4 — Handle DELETED files
+For each DELETED file:
+  a) Read the corresponding node file listed in the manifest.
+  b) Check if any other nodes list it in their `connections:` or `contradicts:` arrays.
+     If yes, remove those references and note the removal inline: "(source deleted: FILENAME)".
+  c) Delete the node file from `02_nodes/`.
+  d) Remove its row from `node_registry.md`.
+  e) Remove its row from `input_manifest.md`.
+  f) Decrement the node count in `cluster_index.md` for its discipline.
+  g) Remove its link from `master_index.md`.
+
+## Step 5 — Report
+Summarize what changed:
+  - X new files processed
+  - X files updated
+  - X files deleted
+  - X files unchanged (skipped)
+
+---
+
+# Command 6: "Compress node: [node name]"
 
 1. Read the node file.
 2. Keep the YAML block unchanged.
