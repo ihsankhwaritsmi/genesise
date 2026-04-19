@@ -5,7 +5,9 @@
 04_synthesis/
 
 # Generated rules engine (created by bootstrap, may contain local paths)
+# Both files are identical — .clinerules for Cline, CLAUDE.md for Claude Code
 .clinerules
+CLAUDE.md
 
 # OS files
 .DS_Store

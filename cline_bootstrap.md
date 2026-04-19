@@ -72,7 +72,7 @@ Create the retrieval protocol file (loaded on demand, not on every session):
 File: 03_indexes/retrieval_protocol.md
 
   # Retrieval Protocol
-  Loaded by .clinerules when executing any query or synthesis command.
+  Loaded by .clinerules (Cline) or CLAUDE.md (Claude Code) when executing any query or synthesis command.
 
   ## Step 0 — HyDE (Hypothetical Document Expansion)
   Before touching any index, internally generate:
@@ -357,6 +357,15 @@ Step 6 — Report
 
 ---
 
-Phase 3: Finalize
+Phase 3: Create CLAUDE.md for Claude Code compatibility
+
+Create a file named CLAUDE.md in the root of this workspace.
+Write exactly the same content as .clinerules into it.
+Claude Code reads CLAUDE.md the same way Cline reads .clinerules —
+both files are identical so the system works with either tool.
+
+---
+
+Phase 4: Finalize
 
 Confirm the workspace is ready. List all files and folders created.
