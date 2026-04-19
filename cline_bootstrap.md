@@ -97,18 +97,48 @@ Rules:
 
 ---
 
+# File Reading Protocol (zero install required)
+
+Attempt to read every file using only tools already present on the OS. Never ask the user to install anything.
+
+## By file type:
+
+Plain text — read directly:
+  .txt .md .csv .json .xml .html .yaml .toml .log
+  .py .js .ts .jsx .tsx .rs .go .java .c .cpp .cs and any other code file
+
+PDFs (.pdf):
+  Use your read_file tool directly. Vision-capable models (Claude, GPT-4V) can read PDFs natively.
+  If the file comes back as unreadable binary, notify the user and ask them to copy-paste the key sections.
+  Do not require pdftotext or any external tool.
+
+Word documents (.docx, .odt):
+  These are ZIP archives. Extract the text using only built-in OS commands:
+  - Windows : execute_command: powershell -command "$xml = [xml]($(Expand-Archive -Path 'FILE' -DestinationPath 'tmp_extract' -Force; Get-Content 'tmp_extract/word/document.xml')); $xml.GetElementsByTagName('w:t') | ForEach-Object { $_.InnerText } | Out-String; Remove-Item 'tmp_extract' -Recurse -Force"
+  - Mac/Linux: execute_command: unzip -p FILE word/document.xml | sed 's/<[^>]*>//g'
+
+Excel spreadsheets (.xlsx):
+  Also ZIP archives. Extract shared strings and sheet data:
+  - Windows : execute_command: powershell -command "Expand-Archive -Path 'FILE' -DestinationPath 'tmp_extract' -Force; Get-Content 'tmp_extract/xl/sharedStrings.xml' | ForEach-Object { $_ -replace '<[^>]+>','' }; Remove-Item 'tmp_extract' -Recurse -Force"
+  - Mac/Linux: execute_command: unzip -p FILE xl/sharedStrings.xml | sed 's/<[^>]*>//g'
+
+Images (.png .jpg .jpeg .gif .webp .bmp):
+  Use vision capability to read directly. Extract visible text, describe diagrams, tables, and structure.
+
+Any other unreadable file:
+  Notify the user: "Could not read [filename]. Please paste the content as plain text."
+
+---
+
 # Extraction Protocol
 
-Apply based on file type:
+Apply based on content type after reading:
 
 - Scientific/Academic  : hypothesis, methodology gaps, replication status, competing theories
-- Strategic/Corporate  : risk vectors, market assumptions, unspoken biases, timelines
+- Strategic/Financial  : risk vectors, market assumptions, unspoken biases, timelines
 - Code/Architecture    : failure modes, design patterns, bottlenecks, dependencies
-- Transcripts          : implicit intent, decisions made, unspoken context
-- Datasets (CSV/JSON)  : run a script for schema + statistical summary; document anomalies
-
-For PDFs: `pdftotext 01_raw_inputs/file.pdf -` or PyMuPDF script.
-For CSVs: Python pandas — head(), describe(), info() — build node from terminal output.
+- Transcripts/Notes    : implicit intent, decisions made, unspoken context
+- Datasets (CSV/JSON)  : document schema, value ranges, anomalies, and data shape
 
 ---
 

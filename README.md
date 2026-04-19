@@ -51,7 +51,7 @@ Keep adding files. Keep asking. Keep building.
 - [VS Code](https://code.visualstudio.com/)
 - [Cline extension](https://marketplace.visualstudio.com/items?itemName=saoudrizwan.claude-dev) with any LLM API key (Anthropic, OpenAI, Gemini, local via Ollama, etc.)
 
-That's it. No databases, no Python environments, no configuration files beyond what the bootstrap generates.
+That's it. No installs, no databases, no configuration beyond what the bootstrap generates. Drop any file type — PDF, Word, Excel, image, CSV, code, plain text — and Cline reads it using the tools already on your OS.
 
 ---
 
@@ -142,19 +142,6 @@ Hits Wikipedia, ArXiv, and DuckDuckGo via `curl` — no API keys needed. Fires t
 
 **Step 6 — Structured Answer**
 Every response: confidence label · concise answer · sources consulted · gaps identified.
-
----
-
-## Working with PDFs and Large Datasets
-
-| Platform | Command |
-|---|---|
-| macOS | `brew install poppler` |
-| Linux | `sudo apt install poppler-utils` |
-| Windows | install `pdftotext` via [Xpdf tools](https://www.xpdfreader.com/download.html) |
-| All | Python with `pandas` for CSV sampling |
-
-Cline invokes these automatically when it encounters binary files.
 
 ---
 
