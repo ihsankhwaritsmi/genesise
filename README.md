@@ -9,7 +9,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 ![Works with Cline](https://img.shields.io/badge/Works%20with-Cline-blueviolet)
 ![Works with Claude Code](https://img.shields.io/badge/Works%20with-Claude%20Code-orange)
-![Zero Dependencies](https://img.shields.io/badge/Dependencies-Zero-brightgreen)
+![No Install](https://img.shields.io/badge/Install-None%20Required-brightgreen)
 ![Privacy First](https://img.shields.io/badge/Privacy-Local%20Only-blue)
 
 [Quick Start](#quick-start) · [How It Works](#how-it-works) · [Commands](#commands) · [Privacy & Security](#privacy--security)
@@ -30,7 +30,7 @@ No vector databases. No embedding models. No servers. No API keys for retrieval.
 
 ## ✨ Features
 
-- 📥 **Universal ingestion** — PDF, Word, Excel, images, CSV, code, plain text — read with zero installs using tools already on your OS
+- 📥 **Universal ingestion** — PDF, Word, Excel, images, CSV, code, plain text — read using tools already on your OS (see [System Requirements](#system-requirements))
 - 🕸️ **Auto-linked graph** — nodes connect automatically via `[[WikiLinks]]`; contradictions between sources are flagged
 - 🔍 **RAG without a vector DB** — 7-step retrieval protocol using HyDE, cluster pre-filtering, tiered reads, and graph traversal
 - 🧩 **Scales cleanly** — discipline cluster index keeps query cost flat at 50, 200, or 500 nodes
@@ -38,6 +38,23 @@ No vector databases. No embedding models. No servers. No API keys for retrieval.
 - 🔒 **Privacy-first** — clearance levels (`public / internal / confidential / external`), query sanitization, GDPR-inspired data principles
 - 🔄 **Session-persistent** — pick up exactly where you left off; `Sync graph` handles additions, updates, and deletions
 - 🛠️ **Two tools, one graph** — identical rules for Cline (`.clinerules`) and Claude Code (`CLAUDE.md`), same files underneath
+
+---
+
+## System Requirements
+
+No Python packages, npm modules, or servers needed. The system uses tools already present on your OS.
+
+| Dependency | Platform | Purpose | How to check |
+|---|---|---|---|
+| **Python 3** | All | `Sync graph` scripted diff | `python --version` |
+| **PowerShell 5.0+** | Windows only | Read `.docx`, `.xlsx`; get file sizes | `$PSVersionTable.PSVersion` |
+| **poppler-utils** (`pdftotext`) | Linux/Mac fallback | PDF text extraction if native read fails | `pdftotext -v` |
+| **unzip** | Linux/Mac | Read `.docx` / `.xlsx` XML | `unzip -v` |
+
+> **Windows users:** PowerShell ships with Windows 10/11 — no action needed.
+> **Linux/Mac users:** `sudo apt install poppler-utils` or `brew install poppler` for PDF fallback.
+> Claude Code reads PDFs natively; `pdftotext` is only a fallback for edge cases.
 
 ---
 
@@ -115,7 +132,7 @@ Retrieval logic lives in `03_indexes/retrieval_protocol.md` and loads **on deman
 |---|---|---|
 | **0 — HyDE** | Generates a hypothetical ideal-answer summary as a second match signal | 0 file reads |
 | **1 — Cluster filter** | Narrows to 1–3 disciplines via `cluster_index.md` | 1 file read |
-| **2 — Registry scan** | Scores every candidate row; assesses confidence | 1 file read |
+| **2 — Registry scan** | `grep` pre-scan first (zero token cost), then score matched rows; assesses confidence | 1 file read |
 | **3 — Tiered read** | YAML block (30 lines) first; full file only if confirmed relevant | Up to 8 or 15 |
 | **4 — Traversal** | Follows `connections:` / `contradicts:` up to 2 hops | Within budget |
 | **5 — Gap fill** | Parametric (default) or sanitized external search (opt-in) | 0–3 curl calls |
@@ -139,7 +156,8 @@ Confidence is assessed after Step 2 and determines the path:
 | `Query the graph: [question]` | Retrieve and reason — up to 8 nodes, gap-fill if needed |
 | `Query the graph [deep]: [question]` | Same, up to 15 nodes — use for complex cross-domain questions |
 | `Synthesize across domains` | Cross-discipline report; inherits highest source clearance |
-| `Sync graph` | Diff `01_raw_inputs/` vs manifest — handles new, updated, deleted, broken links |
+| `Sync graph` | Scripted Python diff vs manifest — handles new, updated, deleted, broken links |
+| `Lint graph` | Check all nodes for broken YAML, malformed table rows, and orphaned WikiLinks |
 | `Resolve contradiction: [A] vs [B]` | Read both nodes, classify conflict, write resolution |
 | `Search external: [topic]` | Force web search (requires `gap_fill_mode: external` in config) |
 | `Compress node: [name]` | Rewrite node body as 10-bullet list; YAML untouched |

@@ -94,7 +94,12 @@ File: 03_indexes/retrieval_protocol.md
   If no cluster matches, fall through without filtering.
 
   ## Step 2 — Registry Scan
-  Read node_registry.md. If Step 1 ran, only score rows in selected disciplines.
+  Before reading node_registry.md, run a deterministic keyword pre-scan:
+    grep -i "KEYWORD" 03_indexes/node_registry.md
+  Run one grep per core query keyword and one for the key term from your HyDE summary.
+  Collect every matching row. This guarantees zero skipped rows at zero token cost.
+  Then read node_registry.md only to score the grep-matched rows (plus any rows from
+  the Step 1 discipline filter). If Step 1 ran, restrict scoring to those disciplines.
   Score each row against raw query keywords AND HyDE summary:
     HIGH   : title/tags directly match a core concept, OR summary closely matches HyDE
     MEDIUM : summary or tags contain a related keyword
@@ -376,15 +381,46 @@ Use when the question is complex, cross-domain, or requires comprehensive covera
 ## "Sync graph"
 Detects all changes in 01_raw_inputs/ since the last session.
 
-Step 1 — Diff
-  Read input_manifest.md. List current files and sizes:
-    Windows : powershell -command "Get-ChildItem '01_raw_inputs' | Select-Object Name,Length | Format-Table -AutoSize"
-    Mac/Linux: ls -la 01_raw_inputs/
-  Classify each file:
-    NEW       : in 01_raw_inputs/ but not in manifest
-    UPDATED   : in both, size differs
-    DELETED   : in manifest but not in 01_raw_inputs/
-    UNCHANGED : in both, same size — skip
+Step 1 — Diff (scripted — do NOT diff manually)
+  Write the following Python script to a temporary file and execute it.
+  Reading the raw directory listing and diffing by eye guarantees hallucinated diffs
+  at scale; the script is deterministic and costs zero API tokens.
+
+  Temp file path:
+    Windows : %TEMP%\kg_sync.py
+    Mac/Linux: /tmp/kg_sync.py
+
+  Script content:
+    import os, re, json
+    manifest_path = "03_indexes/input_manifest.md"
+    raw_dir = "01_raw_inputs"
+    manifest_files = {}
+    with open(manifest_path) as f:
+        for line in f:
+            m = re.match(r'\|\s*([^|]+?)\s*\|[^|]+\|[^|]+\|\s*(\d+)\s*\|', line)
+            if m:
+                manifest_files[m.group(1).strip()] = int(m.group(2).strip())
+    disk_files = {}
+    for fname in os.listdir(raw_dir):
+        fpath = os.path.join(raw_dir, fname)
+        if os.path.isfile(fpath):
+            disk_files[fname] = os.path.getsize(fpath)
+    result = {"NEW": [], "UPDATED": [], "DELETED": [], "UNCHANGED": []}
+    for f, sz in disk_files.items():
+        if f not in manifest_files:
+            result["NEW"].append(f)
+        elif sz != manifest_files[f]:
+            result["UPDATED"].append(f)
+        else:
+            result["UNCHANGED"].append(f)
+    for f in manifest_files:
+        if f not in disk_files:
+            result["DELETED"].append(f)
+    print(json.dumps(result, indent=2))
+
+  Execute the script. Read the JSON output.
+  Delete the temp script after reading.
+  Classify each file based on the JSON keys: NEW, UPDATED, DELETED, UNCHANGED.
 
 Step 2 — NEW files
   Run "Process new data" for each.
@@ -430,6 +466,20 @@ Step 6 — Report
    Assign clearance: the highest of the two source nodes.
 7. Update last_verified on both nodes to today.
 
+## "Lint graph"
+1. Check YAML frontmatter in every file in 02_nodes/:
+   - Verify the block opens with --- and closes with ---
+   - Verify mandatory fields (summary, date_added, clearance) are present and non-empty
+   - Report any file that fails as: "[file] — broken YAML: [reason]"
+2. Check node_registry.md and cluster_index.md:
+   - Count pipe-delimited columns per row; flag any row whose column count differs from the header row
+   - Report as: "[index file] row [N] — malformed table row"
+3. Scan every node in 02_nodes/ for [[WikiLinks]] in connections: and contradicts:
+   - Verify a corresponding .md file exists in 02_nodes/ for each link
+   - Report orphans as: "[node file] → [[missing link]]"
+4. Print a summary: X nodes checked | X YAML errors | X table errors | X broken links
+   Do not auto-fix anything — report only.
+
 ## "Compress node: [node name]"
 1. Read the node file.
 2. Keep the full YAML block unchanged.
@@ -454,6 +504,18 @@ Step 6 — Report
 - When graph > 50 nodes, always run cluster pre-filter before registry scan.
 - Prefer the registry summary over re-reading a node already read this session.
 - retrieval_protocol.md is only loaded when executing Query, Synthesize, or Resolve commands.
+
+# Atomic Index Writes
+
+NEVER overwrite an index file (node_registry.md, cluster_index.md, input_manifest.md,
+master_index.md) directly in a single step. Use this sequence every time:
+  1. Write the updated content to a temp file (e.g. node_registry.md.tmp).
+  2. Verify the temp file: confirm the header row is intact and every data row has the
+     same number of pipe-delimited columns as the header.
+  3. Only after verification passes, overwrite the original file with the temp file.
+  4. Delete the temp file.
+If verification fails, report the error and leave the original file untouched.
+This protects against partial writes from API errors, token limits, or network interruptions.
 
 ---END RULES---
 
