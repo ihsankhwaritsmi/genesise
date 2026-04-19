@@ -66,9 +66,19 @@ File: 03_indexes/source_config.md
   auto_save_external: enabled
 
   ## External Sources (priority order, only used when gap_fill_mode: external)
+  # Open-access sources (always available):
   1. Wikipedia  — factual/encyclopedic
-  2. ArXiv      — scientific/technical papers
+  2. ArXiv      — scientific/technical preprints (CS, physics, math, biology, etc.)
   3. DuckDuckGo — general web
+
+  # Institutional sources (enable if you have access — e.g. via institution VPN or subscription):
+  # Uncomment the sources you have access to:
+  # 4. IEEE Xplore  — engineering, electronics, computer science
+  # 5. Elsevier     — broad sciences (ScienceDirect)
+  # 6. MDPI         — open-access multidisciplinary journals
+  # 7. Springer     — broad sciences and engineering
+  # 8. PubMed       — biomedical and life sciences (free access)
+  # 9. Semantic Scholar — cross-discipline academic search (free API)
 
   ## Custom Sources
   (none configured)
@@ -175,10 +185,24 @@ File: 03_indexes/retrieval_protocol.md
 
   Step C — Execute sanitized external search:
     Formulate 2 abstracted queries: one from sanitized keywords, one from HyDE summary.
-    Query sources in priority order from source_config.md:
-      Wikipedia : curl -s "https://en.wikipedia.org/api/rest_v1/page/summary/QUERY_TERM"
-      ArXiv     : curl -s "https://export.arxiv.org/api/query?search_query=QUERY&max_results=3"
-      DuckDuckGo: curl -s "https://api.duckduckgo.com/?q=QUERY&format=json&no_html=1"
+    Query sources in priority order from source_config.md.
+    Only query sources that are uncommented/enabled. Skip institutional sources unless explicitly enabled.
+
+    Open-access sources (always available):
+      Wikipedia      : curl -s "https://en.wikipedia.org/api/rest_v1/page/summary/QUERY_TERM"
+      ArXiv          : curl -s "https://export.arxiv.org/api/query?search_query=QUERY&max_results=3"
+      DuckDuckGo     : curl -s "https://api.duckduckgo.com/?q=QUERY&format=json&no_html=1"
+      PubMed         : curl -s "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=QUERY&retmax=3&retmode=json"
+      Semantic Scholar: curl -s "https://api.semanticscholar.org/graph/v1/paper/search?query=QUERY&limit=3&fields=title,abstract,authors,year"
+
+    Institutional sources (only if enabled in source_config.md — requires subscription or VPN):
+      IEEE Xplore    : curl -s "https://ieeexploreapi.ieee.org/api/v1/search/articles?querytext=QUERY&max_records=3&apikey=YOUR_API_KEY"
+      Elsevier       : curl -s "https://api.elsevier.com/content/search/sciencedirect?query=QUERY&count=3" -H "X-ELS-APIKey: YOUR_API_KEY"
+      MDPI           : curl -s "https://www.mdpi.com/search?q=QUERY&journal=all&article_type=research-article&as_subject=all&view=compact" (HTML scrape — parse titles and abstracts)
+      Springer       : curl -s "https://api.springernature.com/meta/v2/json?q=QUERY&p=3&api_key=YOUR_API_KEY"
+
+    Note: IEEE and Elsevier require API keys. If a key is not configured, skip that source silently.
+    If the user mentions they are on an institutional VPN, attempt institutional sources before DuckDuckGo.
     Extract key facts. Note source URLs.
     If auto_save_external is enabled AND findings are substantial:
       Create a node in 02_nodes/ with:

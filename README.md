@@ -249,8 +249,33 @@ Set in `03_indexes/source_config.md`:
 | Mode | Behaviour | Data leaves machine? |
 |---|---|---|
 | `parametric` *(default)* | Model answers from trained knowledge | ❌ Never |
-| `external` | Searches Wikipedia · ArXiv · DuckDuckGo | ⚠️ Yes — sanitized |
+| `external` | Searches open-access sources + any enabled institutional sources | ⚠️ Yes — sanitized |
 | `none` | Reports the gap only | ❌ Never |
+
+### External Search Sources
+
+When `gap_fill_mode: external`, the agent queries sources in priority order. Open-access sources are always available; institutional sources require a subscription or institutional VPN.
+
+**Open-access (always available):**
+
+| Source | Coverage | API |
+|---|---|---|
+| Wikipedia | Encyclopedic / factual | Free, no key |
+| ArXiv | CS, physics, math, biology preprints | Free, no key |
+| PubMed | Biomedical and life sciences | Free, no key |
+| Semantic Scholar | Cross-discipline academic search | Free, no key |
+| DuckDuckGo | General web | Free, no key |
+
+**Institutional (uncomment in `source_config.md` when you have access):**
+
+| Source | Coverage | Access |
+|---|---|---|
+| IEEE Xplore | Engineering, electronics, computer science | API key or institutional VPN |
+| Elsevier / ScienceDirect | Broad sciences | API key or institutional VPN |
+| MDPI | Open-access multidisciplinary journals | API key or institutional VPN |
+| Springer | Broad sciences and engineering | API key or institutional VPN |
+
+> **VPN tip:** If your institution provides VPN access, connecting before running a query unlocks paywalled full-text on IEEE, Elsevier, and Springer without needing a personal API key. Tell the agent `"I'm on my institution VPN"` and it will attempt institutional sources before falling back to DuckDuckGo.
 
 ### Query Sanitization
 
