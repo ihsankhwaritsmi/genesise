@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🧠 Genesise
+# Genesise
 
 **A self-organizing, AI-maintained knowledge base that lives entirely on your machine.**
 
@@ -12,13 +12,13 @@ _Inspired by [Andrej Karpathy's LLM Wiki](https://gist.github.com/karpathy) conc
 ![pip install genesise](https://img.shields.io/badge/pip%20install-genesise-brightgreen)
 ![Privacy First](https://img.shields.io/badge/Privacy-Local%20Only-blue)
 
-[Quick Start](#quick-start) · [How It Works](#how-it-works) · [Commands](#commands) · [Privacy & Security](#privacy--security)
+[Quick Start](#quick-start) · [How It Works](#how-it-works) · [CLI Reference](#cli-reference) · [Agent Commands](#agent-commands) · [Privacy & Security](#privacy--security)
 
 </div>
 
 ---
 
-## What Is This?
+## Overview
 
 Drop any file into a folder. Tell your AI agent to process it. Come back later and ask a question — the agent retrieves the answer from _your own documents_, not from its training data.
 
@@ -28,16 +28,16 @@ No vector databases. No embedding models. No servers. No API keys for retrieval.
 
 ---
 
-## ✨ Features
+## Features
 
-- 📥 **Universal ingestion** — PDF, Word, Excel, images, CSV, code, plain text — read using tools already on your OS (see [System Requirements](#system-requirements))
-- 🕸️ **Auto-linked graph** — nodes connect automatically via `[[WikiLinks]]`; contradictions between sources are flagged
-- 🔍 **RAG without a vector DB** — 7-step retrieval protocol using HyDE, cluster pre-filtering, tiered reads, and graph traversal
-- 🧩 **Scales cleanly** — discipline cluster index keeps query cost flat at 50, 200, or 500 nodes
-- 🌐 **Smart gap-fill** — uses the model's trained knowledge by default; external web search available as opt-in
-- 🔒 **Privacy-first** — clearance levels (`public / internal / confidential / external`), query sanitization, GDPR-inspired data principles
-- 🔄 **Session-persistent** — pick up exactly where you left off; `Sync graph` handles additions, updates, and deletions
-- 🛠️ **Two tools, one graph** — identical rules for Cline (`.clinerules`) and Claude Code (`CLAUDE.md`), same files underneath
+- **Universal ingestion** — PDF, Word, Excel, images, CSV, code, plain text
+- **Auto-linked graph** — nodes connect automatically via `[[WikiLinks]]`; contradictions between sources are flagged
+- **RAG without a vector DB** — 7-step retrieval protocol using HyDE, cluster pre-filtering, tiered reads, and graph traversal
+- **Scales cleanly** — discipline cluster index keeps query cost flat at 50, 200, or 500 nodes
+- **Smart gap-fill** — uses the model's trained knowledge by default; external web search available as opt-in
+- **Privacy-first** — clearance levels (`public / internal / confidential / external`), query sanitization, GDPR-inspired data principles
+- **Session-persistent** — pick up exactly where you left off; `gns sync` handles additions, updates, and deletions
+- **Two tools, one graph** — identical rules for Cline (`.clinerules`) and Claude Code (`CLAUDE.md`), same files underneath
 
 ---
 
@@ -172,40 +172,224 @@ Confidence is assessed after Step 2 and determines the path:
 
 ---
 
-## Commands
+## CLI Reference
 
-### Agent commands (require LLM)
+Install once, run anywhere inside a workspace:
 
-Tell these to your agent in the chat panel:
+```bash
+pip install genesise
+```
 
-| Command                              | What it does                                                           |
-| ------------------------------------ | ---------------------------------------------------------------------- |
-| `Process new data`                   | Ingest files from `01_raw_inputs/`, create nodes, update all indexes   |
-| `Query the graph: [question]`        | Retrieve and reason — up to 8 nodes, gap-fill if needed                |
-| `Query the graph [deep]: [question]` | Same, up to 15 nodes — use for complex cross-domain questions          |
-| `Synthesize across domains`          | Cross-discipline report; inherits highest source clearance             |
-| `Resolve contradiction: [A] vs [B]` | Read both nodes, classify conflict, write resolution                   |
-| `Search external: [topic]`           | Force web search (requires `gap_fill_mode: external` in config)        |
-| `Compress node: [name]`              | Rewrite node body as 10-bullet list; YAML untouched                    |
-| `Set clearance: [name] to [level]`   | Update node clearance; flags affected synthesis reports                |
-| `Merge nodes: [A] into [B]`          | Combine two duplicate/overlapping nodes; cascades all cross-references |
-| `Sync graph`                         | Run `gns sync`, then process any NEW/UPDATED files with the agent       |
-| `Lint graph`                         | Run `gns lint` and report results                                       |
+The CLI is named `gns`. Running `gns` with no arguments shows help.
 
-### CLI commands (`pip install genesise`)
+---
 
-Run these directly in your terminal — no LLM needed, instant:
+### `gns init [PATH]`
 
-| Command                        | What it does                                                                    |
-| ------------------------------ | ------------------------------------------------------------------------------- |
-| `gns init [path]`               | Scaffold a new workspace — creates folders and all index files                  |
-| `gns sync`                      | Detect changes, cascade deletions, report NEW/UPDATED files for agent ingestion |
-| `gns lint`                      | Check YAML, table integrity, and broken WikiLinks across the whole graph        |
-| `gns list`                      | Compact table of all nodes by discipline (supports `-d` and `-c` filters)       |
-| `gns summary`                   | Health snapshot: counts, coverage, staleness, top query keywords                |
-| `gns flag-stale`                | Classify every node as STALE / AGING / CURRENT / UNKNOWN by last_verified       |
-| `gns verify <node>`             | Stamp `last_verified: today` without changing node content                      |
-| `gns rename <old> <new>`        | Rename a node and cascade every WikiLink, index row, and manifest entry         |
+Scaffold a new workspace. Safe to re-run — existing folders and index files are not overwritten.
+
+```
+gns init [PATH] [OPTIONS]
+
+Arguments:
+  PATH    Directory to initialize. Defaults to current directory.
+
+Options:
+  -f, --force    Overwrite existing index files.
+```
+
+**Creates:**
+
+| Path | Description |
+| --- | --- |
+| `01_raw_inputs/` | Drop source files here |
+| `02_nodes/` | Generated knowledge nodes |
+| `03_indexes/` | Retrieval indexes and config |
+| `04_synthesis/` | Cross-domain reports |
+| `03_indexes/master_index.md` | Root Map of Content (MOC) |
+| `03_indexes/node_registry.md` | Primary retrieval index — one row per node |
+| `03_indexes/cluster_index.md` | Discipline pre-filter for large graphs |
+| `03_indexes/input_manifest.md` | Source file tracking with SHA-256 hashes |
+| `03_indexes/query_log.md` | Append-only query history |
+| `03_indexes/source_config.md` | Gap-fill mode and external source settings |
+
+> `retrieval_protocol.md` is generated later by the agent during bootstrap (Phase 2/3), not by `gns init`.
+
+---
+
+### `gns sync`
+
+Detect changes in `01_raw_inputs/` and update the graph indexes. Runs without the LLM — reports which files need agent processing.
+
+```
+gns sync [OPTIONS]
+
+Options:
+  --json    Output results as JSON instead of formatted text.
+```
+
+**What it does:**
+
+1. Computes SHA-256 hashes for all files in `01_raw_inputs/`
+2. Compares against `input_manifest.md` to classify each file:
+   - **NEW** — not in manifest
+   - **UPDATED** — hash changed
+   - **DELETED** — in manifest but no longer on disk
+   - **UNCHANGED** — hash matches
+3. For **deleted** files: cascades the removal — updates every node that links to the deleted node, removes the registry row, decrements discipline cluster counts, removes the manifest row, and updates `master_index.md`
+4. For **updated** files: updates the SHA-256 and `date_added` in the manifest
+5. Scans all nodes for broken WikiLinks and reports the count
+
+**Output (text mode):** summary table of counts, list of new/updated files, broken link count.
+
+After `gns sync` reports NEW or UPDATED files, run `Process new data` in your agent to ingest them.
+
+---
+
+### `gns lint`
+
+Validate graph integrity. Exits with code 1 if any errors are found.
+
+```
+gns lint [OPTIONS]
+
+Options:
+  --fix    Auto-fix table rows. (Not yet implemented.)
+```
+
+**Checks performed:**
+
+| Check | What it validates |
+| --- | --- |
+| **YAML — opening marker** | Each node starts with `---` |
+| **YAML — closing marker** | Frontmatter has a closing `---` |
+| **YAML — syntax** | Frontmatter parses as valid YAML |
+| **YAML — mandatory fields** | `summary`, `date_added`, and `clearance` are present |
+| **Table columns** | All data rows in `node_registry.md` and `cluster_index.md` have the same column count as the header |
+| **WikiLinks** | Every `[[link]]` in `connections:` and `contradicts:` points to an existing node in `02_nodes/` |
+
+---
+
+### `gns list`
+
+Display all nodes grouped by discipline as a formatted table.
+
+```
+gns list [OPTIONS]
+
+Options:
+  -d, --discipline TEXT    Filter by discipline (substring match, case-insensitive).
+  -c, --clearance TEXT     Filter by clearance level (exact match, case-insensitive).
+```
+
+**Output columns:** `#` · `Title` · `Type` · `Clearance` · `Summary`
+
+Clearance is color-coded: green = public, yellow = internal, red = confidential, blue = external.
+
+---
+
+### `gns flag-stale`
+
+Audit all nodes for staleness based on `last_verified` date.
+
+```
+gns flag-stale [OPTIONS]
+
+Options:
+  -s, --stale-only    Show only stale nodes (last verified > 6 months ago).
+```
+
+**Staleness thresholds:**
+
+| Status | Condition |
+| --- | --- |
+| `STALE` | `last_verified` > 180 days ago |
+| `AGING` | `last_verified` 90–180 days ago |
+| `CURRENT` | `last_verified` < 90 days ago |
+| `UNKNOWN` | No `last_verified` field present |
+
+**Output:** nodes grouped by status category, each showing file, title, discipline, and last verified date.
+
+---
+
+### `gns verify NODE`
+
+Stamp `last_verified: <today>` on a node without changing its content. Safe to run on current nodes.
+
+```
+gns verify NODE
+
+Arguments:
+  NODE    Node filename stem or full filename (e.g. my_node or my_node.md).
+          Accepts case-insensitive fuzzy matching if no exact match is found.
+```
+
+---
+
+### `gns rename OLD NEW`
+
+Rename a node file and cascade the change everywhere in the graph.
+
+```
+gns rename OLD_NAME NEW_NAME
+
+Arguments:
+  OLD_NAME    Current node filename stem (without .md).
+  NEW_NAME    New node filename stem (without .md).
+```
+
+**Cascade operations:**
+
+1. Updates the `title:` YAML field to the title-cased version of `NEW_NAME`
+2. Replaces every `[[OLD_NAME]]` WikiLink in all other nodes with `[[NEW_NAME]]`
+3. Updates the row in `node_registry.md`
+4. Updates the row in `input_manifest.md`
+5. Updates the link in `master_index.md`
+6. Deletes the old `.md` file
+
+**Output:** confirmation with old → new filename and count of cross-references updated.
+
+---
+
+### `gns summary`
+
+Print a health and coverage snapshot of the graph. No arguments.
+
+```
+gns summary
+```
+
+**Output sections:**
+
+| Section | Contents |
+| --- | --- |
+| **Node counts by type** | Table of node types and counts |
+| **Node counts by discipline** | Table of disciplines and counts |
+| **Node counts by clearance** | Table of clearance levels and counts |
+| **Staleness** | Count and list of nodes older than 180 days |
+| **Query statistics** | Total queries, queries with gaps, top 5 keywords |
+| **Coverage assessment** | Best-covered disciplines, thin areas (single-node disciplines), gap-query flags |
+
+---
+
+## Agent Commands
+
+Tell these phrases to your agent in the chat panel. They require the LLM and follow the rules defined in `CLAUDE.md` / `.clinerules`.
+
+| Command | What it does |
+| --- | --- |
+| `Process new data` | Ingest files from `01_raw_inputs/`, create nodes, update all indexes |
+| `Query the graph: [question]` | Retrieve and reason — up to 8 nodes, gap-fill if needed |
+| `Query the graph [deep]: [question]` | Same, up to 15 nodes — use for complex cross-domain questions |
+| `Synthesize across domains` | Cross-discipline report; inherits highest source clearance |
+| `Resolve contradiction: [A] vs [B]` | Read both nodes, classify conflict, write resolution |
+| `Search external: [topic]` | Force web search (requires `gap_fill_mode: external` in `source_config.md`) |
+| `Compress node: [name]` | Rewrite node body as 10-bullet list; YAML frontmatter untouched |
+| `Set clearance: [name] to [level]` | Update node clearance; flags affected synthesis reports |
+| `Merge nodes: [A] into [B]` | Combine two duplicate/overlapping nodes; cascades all cross-references |
+| `Sync graph` | Run `gns sync`, then process any NEW/UPDATED files with the agent |
+| `Lint graph` | Run `gns lint` and report results |
+| `List nodes` | List all nodes in the graph |
 
 ---
 
@@ -213,13 +397,29 @@ Run these directly in your terminal — no LLM needed, instant:
 
 ```
 .
-├── src/kg/                     ← kg CLI package (pip install genesise)
+├── src/genesise/               ← genesise CLI package (pip install genesise)
+│   ├── main.py                 ← Typer app, command registration
+│   ├── console.py              ← platform-aware Rich console (UTF-8 on Windows)
 │   ├── engine/                 ← workspace detection, hashing, atomic writes, manifest/registry I/O
-│   └── commands/               ← init, sync, lint, list, summary, flag-stale, verify, rename
+│   │   ├── workspace.py        ← find_workspace(), require_workspace()
+│   │   ├── nodes.py            ← YAML parsing, field updates, WikiLink replace/remove
+│   │   ├── hashing.py          ← SHA-256 file hashing
+│   │   ├── atomic.py           ← .tmp + os.replace() safe writes
+│   │   ├── manifest.py         ← ManifestEntry dataclass, read/write input_manifest.md
+│   │   └── registry.py         ← RegistryEntry dataclass, read/write node_registry.md
+│   └── commands/               ← one module per CLI command
+│       ├── init.py
+│       ├── sync.py
+│       ├── lint.py
+│       ├── list_nodes.py
+│       ├── flag_stale.py
+│       ├── verify.py
+│       ├── rename.py
+│       └── summary.py
 ├── 01_raw_inputs/              ← drop your files here (gitignored)
 ├── 02_nodes/                   ← generated knowledge nodes (gitignored)
 ├── 03_indexes/                 ← retrieval indexes and config (gitignored)
-│   ├── retrieval_protocol.md   ← 7-step retrieval logic, loaded on demand
+│   ├── retrieval_protocol.md   ← 7-step retrieval logic, loaded on demand (agent-generated)
 │   ├── node_registry.md        ← one row per node — the primary retrieval index
 │   ├── cluster_index.md        ← discipline pre-filter, keeps queries fast at scale
 │   ├── input_manifest.md       ← source file tracking for sync and change detection
@@ -227,8 +427,8 @@ Run these directly in your terminal — no LLM needed, instant:
 │   ├── master_index.md         ← human-readable table of contents
 │   └── source_config.md        ← gap-fill mode and external source settings
 ├── 04_synthesis/               ← cross-domain reports (gitignored)
-├── .clinerules                 ← rules engine for Cline (gitignored, generated)
-├── CLAUDE.md                   ← rules engine for Claude Code (gitignored, generated)
+├── .clinerules                 ← rules engine for Cline (gitignored, agent-generated)
+├── CLAUDE.md                   ← rules engine for Claude Code (gitignored, agent-generated)
 ├── pyproject.toml              ← package definition for genesise
 ├── .gitignore
 └── bootstrap.md                ← one-time setup — the committed source of truth
@@ -238,28 +438,64 @@ Run these directly in your terminal — no LLM needed, instant:
 
 ---
 
-## Node Structure
+## Node Format
 
-Every node in `02_nodes/` is a Markdown file with a typed YAML header:
+Every file in `02_nodes/` is a Markdown file with a typed YAML frontmatter block. The linter enforces `summary`, `date_added`, and `clearance` as mandatory fields.
 
 ```yaml
 ---
 title: ""
-type: "" # research_paper | strategy | codebase | transcript | abstract_concept | dataset | synthesis | external
+type: ""          # research_paper | strategy | codebase | transcript | abstract_concept | dataset | synthesis | external
 discipline: ""
-clearance: "" # public | internal | confidential | external
+clearance: ""     # public | internal | confidential | external
 tags: []
-keywords: [] # specific terms and entities — secondary retrieval signal
-summary: "" # ONE sentence — mandatory, primary retrieval signal
+keywords: []      # specific terms and entities — secondary retrieval signal
+summary: ""       # ONE sentence — mandatory; primary retrieval signal
 assumptions: []
-connections: [] # [[WikiLink]] format
-contradicts: [] # [[WikiLink]] format
+connections: []   # [[WikiLink]] format — related nodes
+contradicts: []   # [[WikiLink]] format — conflicting nodes
 source: ""
-confidence: "" # high | medium | low
-date_added: "" # set once, never changed
-last_verified: "" # updated on sync, compress, or resolve
+confidence: ""    # high | medium | low
+date_added: ""    # set once, never changed
+last_verified: "" # updated by gns verify, sync, compress, or resolve
 ---
 ```
+
+WikiLinks use the node filename stem without the `.md` extension: `[[my_node]]`.
+
+---
+
+## Index File Formats
+
+All indexes are plain Markdown tables. The CLI reads and writes them directly.
+
+### `node_registry.md`
+
+| File | Title | Type | Discipline | Clearance | Tags | Summary |
+| --- | --- | --- | --- | --- | --- | --- |
+
+One row per node. This is the primary retrieval index scanned during Step 2 of the retrieval protocol.
+
+### `cluster_index.md`
+
+| Discipline | Node Count | Coverage Summary |
+| --- | --- | --- |
+
+One row per discipline. Used in Step 1 to narrow the search space before scanning the full registry.
+
+### `input_manifest.md`
+
+| Source File | Node File | Date Added | SHA-256 |
+| --- | --- | --- | --- |
+
+One row per source file. `gns sync` reads this to detect new, updated, and deleted files.
+
+### `query_log.md`
+
+| Date | Query | Mode | Nodes Hit | Confidence | Gaps |
+| --- | --- | --- | --- | --- | --- |
+
+Append-only. Every agent query appends one row. `gns summary` reads this for keyword analysis.
 
 ---
 
@@ -267,47 +503,47 @@ last_verified: "" # updated on sync, compress, or resolve
 
 ### Clearance Levels
 
-| Level          | Meaning                | External search                    |
-| -------------- | ---------------------- | ---------------------------------- |
-| `public`       | No restrictions        | ✅ Safe to use directly            |
-| `internal`     | Stays within the graph | ⚠️ Must be abstracted first        |
-| `confidential` | Sensitive content      | ❌ Blocks external search entirely |
-| `external`     | Sourced from outside   | Always `confidence: low`           |
+| Level | Meaning | External search |
+| --- | --- | --- |
+| `public` | No restrictions | Safe to use directly |
+| `internal` | Stays within the graph | Must be abstracted first |
+| `confidential` | Sensitive content | Blocks external search entirely |
+| `external` | Sourced from outside | Always `confidence: low` |
 
 Synthesis reports automatically inherit the **highest** clearance of any source node.
 
 ### Gap-Fill Modes
 
-Set in `03_indexes/source_config.md`:
+Set `gap_fill_mode` in `03_indexes/source_config.md`:
 
-| Mode                     | Behaviour                                                        | Data leaves machine? |
-| ------------------------ | ---------------------------------------------------------------- | -------------------- |
-| `parametric` _(default)_ | Model answers from trained knowledge                             | ❌ Never             |
-| `external`               | Searches open-access sources + any enabled institutional sources | ⚠️ Yes — sanitized   |
-| `none`                   | Reports the gap only                                             | ❌ Never             |
+| Mode | Behaviour | Data leaves machine? |
+| --- | --- | --- |
+| `parametric` _(default)_ | Model answers from trained knowledge | Never |
+| `external` | Searches open-access sources + any enabled institutional sources | Yes — sanitized |
+| `none` | Reports the gap only | Never |
 
 ### External Search Sources
 
-When `gap_fill_mode: external`, the agent queries sources in priority order. Open-access sources are always available; institutional sources require a subscription or institutional VPN.
+When `gap_fill_mode: external`, the agent queries sources in priority order.
 
 **Open-access (always available):**
 
-| Source           | Coverage                             | API          |
-| ---------------- | ------------------------------------ | ------------ |
-| Wikipedia        | Encyclopedic / factual               | Free, no key |
-| ArXiv            | CS, physics, math, biology preprints | Free, no key |
-| PubMed           | Biomedical and life sciences         | Free, no key |
-| Semantic Scholar | Cross-discipline academic search     | Free, no key |
-| DuckDuckGo       | General web                          | Free, no key |
+| Source | Coverage | API |
+| --- | --- | --- |
+| Wikipedia | Encyclopedic / factual | Free, no key |
+| ArXiv | CS, physics, math, biology preprints | Free, no key |
+| PubMed | Biomedical and life sciences | Free, no key |
+| Semantic Scholar | Cross-discipline academic search | Free, no key |
+| DuckDuckGo | General web | Free, no key |
 
 **Institutional (uncomment in `source_config.md` when you have access):**
 
-| Source                   | Coverage                                   | Access                       |
-| ------------------------ | ------------------------------------------ | ---------------------------- |
-| IEEE Xplore              | Engineering, electronics, computer science | API key or institutional VPN |
-| Elsevier / ScienceDirect | Broad sciences                             | API key or institutional VPN |
-| MDPI                     | Open-access multidisciplinary journals     | API key or institutional VPN |
-| Springer                 | Broad sciences and engineering             | API key or institutional VPN |
+| Source | Coverage | Access |
+| --- | --- | --- |
+| IEEE Xplore | Engineering, electronics, computer science | API key or institutional VPN |
+| Elsevier / ScienceDirect | Broad sciences | API key or institutional VPN |
+| MDPI | Open-access multidisciplinary journals | API key or institutional VPN |
+| Springer | Broad sciences and engineering | API key or institutional VPN |
 
 > **VPN tip:** If your institution provides VPN access, connecting before running a query unlocks paywalled full-text on IEEE, Elsevier, and Springer without needing a personal API key. Tell the agent `"I'm on my institution VPN"` and it will attempt institutional sources before falling back to DuckDuckGo.
 
@@ -315,36 +551,21 @@ When `gap_fill_mode: external`, the agent queries sources in priority order. Ope
 
 When `external` mode is enabled, every search query goes through three gates before leaving the machine:
 
-1. **Clearance check** — any `confidential` node in context → search aborted
-2. **Abstraction** — internal names, codenames, employee names, and financial figures are forbidden in queries; they must be rewritten to their generic concept
+1. **Clearance check** — any `confidential` node in context aborts the search
+2. **Abstraction** — internal names, codenames, employee names, and financial figures are forbidden in queries and must be rewritten to their generic concept
    - `"Project Orion SSO failure"` → `"Single Sign-On implementation failure analysis"`
    - `"Q3 Helios revenue shortfall"` → `"revenue forecasting gap analysis techniques"`
 3. **Fallback** — if a term can't be safely abstracted, the agent falls back to `parametric` automatically
 
 ### GDPR-Inspired Principles
 
-| Principle                                | How it's applied                                                         |
-| ---------------------------------------- | ------------------------------------------------------------------------ |
-| **Data minimisation**                    | Extract concepts, not verbatim source text                               |
-| **Purpose limitation**                   | Clearance level governs what each node can be used for                   |
-| **Accuracy**                             | `last_verified` tracks staleness; nodes older than 6 months are flagged  |
-| **Right to erasure**                     | Deletion cascades to all references — no orphaned links or registry rows |
-| **No unnecessary external transmission** | `parametric` is the default; `external` requires explicit opt-in         |
-
----
-
-## vs. Karpathy's Original LLM Wiki
-
-|               | Karpathy's LLM Wiki | Genesise                                         |
-| ------------- | ------------------- | ------------------------------------------------ |
-| Note creation | You write manually  | Agent extracts automatically                     |
-| Structure     | Freeform Markdown   | Typed YAML schema                                |
-| Graph         | None                | Bidirectional links + contradiction tracking     |
-| Retrieval     | Ad-hoc              | 7-step protocol with HyDE and cluster pre-filter |
-| Scale         | Degrades            | Flat cost via cluster index                      |
-| Gap fill      | None                | Parametric (default) or sanitized external       |
-| Privacy       | None                | Clearance levels + query sanitization            |
-| Sync          | Manual              | Diff-based auto-sync                             |
+| Principle | How it's applied |
+| --- | --- |
+| **Data minimisation** | Extract concepts, not verbatim source text |
+| **Purpose limitation** | Clearance level governs what each node can be used for |
+| **Accuracy** | `last_verified` tracks staleness; nodes older than 6 months are flagged |
+| **Right to erasure** | Deletion cascades to all references — no orphaned links or registry rows |
+| **No unnecessary external transmission** | `parametric` is the default; `external` requires explicit opt-in |
 
 ---
 
@@ -353,8 +574,8 @@ When `external` mode is enabled, every search query goes through three gates bef
 **Bootstrap ran but the workspace looks empty**
 The agent may have confirmed too early. Run `List nodes` — if it returns nothing, re-run bootstrap. The idempotency rule ensures existing data is never overwritten.
 
-**`Sync graph` marks everything as UPDATED even though files haven't changed**
-The manifest was written with file sizes (old format) and the sync script now expects SHA-256 hashes. Fix: run `Process new data` on the affected files to rewrite their manifest rows with correct hashes, or manually update the SHA-256 column in `03_indexes/input_manifest.md`.
+**`gns sync` marks everything as UPDATED even though files haven't changed**
+The manifest was written with file sizes (old format) and the sync engine now expects SHA-256 hashes. Fix: run `Process new data` on the affected files to rewrite their manifest rows with correct hashes, or manually update the SHA-256 column in `03_indexes/input_manifest.md`.
 
 **PDF won't read / comes back garbled**
 Claude reads PDFs natively. If a file fails, ask the agent: `"The file [name] is unreadable — please ask me to paste the content."` For scanned PDFs (image-only), vision extraction is used automatically but quality depends on scan resolution.
@@ -362,20 +583,35 @@ Claude reads PDFs natively. If a file fails, ask the agent: `"The file [name] is
 **Word or Excel file fails on Mac/Linux**
 The `unzip` command must be installed: `sudo apt install unzip` (Linux) or it ships with macOS by default. If the XML extracted is blank, the `.docx` may use a non-standard internal structure — paste the content manually.
 
-**`Sync graph` Python script fails with `FileNotFoundError`**
-Python 3 must be on your PATH: `python --version` or `python3 --version`. On Windows, ensure Python was added to PATH during installation. The script is written to `%TEMP%\kg_sync.py` (Windows) or `/tmp/kg_sync.py` (Mac/Linux).
+**`gns` command not found**
+Python's scripts directory must be on your PATH. On Windows: check that Python was added to PATH during installation, or run `pip show genesise` to find the install location and add its `Scripts/` folder to PATH. On Mac/Linux: `export PATH="$HOME/.local/bin:$PATH"`.
 
 **Institutional sources return 401 / no results**
 Check that the API key is set in `03_indexes/source_config.md` under `ieee_api_key:`, `elsevier_api_key:`, or `springer_api_key:`. Keys are institution-specific — obtain them from your library's database access page. If on VPN without a key, MDPI and PubMed still work (no key required).
 
 **Node registry or cluster index got corrupted**
-The atomic write protocol in the rules engine writes to a `.tmp` file before overwriting the real file. If an index looks broken, check for a leftover `.tmp` file in `03_indexes/` — it may contain the last good write. Rename it to replace the corrupted file, then run `Lint graph` to verify.
+The engine writes to a `.tmp` file before overwriting the real file. If an index looks broken, check for a leftover `.tmp` file in `03_indexes/` — it may contain the last good write. Rename it to replace the corrupted file, then run `gns lint` to verify.
 
 **`Process new data` keeps asking about duplicates for every file**
 The duplicate check compares core keywords against the registry. If your files share a lot of common terminology (e.g. many papers on the same topic), you'll get frequent prompts. Answer "new node" once and the agent will link them via `connections:` rather than merging. Use `Merge nodes` later if you decide consolidation makes sense.
 
 **Agent ignores the rules / doesn't follow the protocol**
 `CLAUDE.md` (Claude Code) and `.clinerules` (Cline) must exist in the workspace root — both are gitignored and generated by bootstrap. If they're missing, re-run bootstrap (safe to do on an existing workspace).
+
+---
+
+## vs. Karpathy's Original LLM Wiki
+
+| | Karpathy's LLM Wiki | Genesise |
+| --- | --- | --- |
+| Note creation | You write manually | Agent extracts automatically |
+| Structure | Freeform Markdown | Typed YAML schema |
+| Graph | None | Bidirectional links + contradiction tracking |
+| Retrieval | Ad-hoc | 7-step protocol with HyDE and cluster pre-filter |
+| Scale | Degrades | Flat cost via cluster index |
+| Gap fill | None | Parametric (default) or sanitized external |
+| Privacy | None | Clearance levels + query sanitization |
+| Sync | Manual | Diff-based auto-sync with SHA-256 change detection |
 
 ---
 
